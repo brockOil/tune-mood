@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize";
 // TODO: Replace with your actual Spotify Client ID
-const SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID_HERE";
+const SPOTIFY_CLIENT_ID = "d4e814ec1a9b4cc499a1ca754c3def70";
 const REDIRECT_URI = `${window.location.origin}/callback`;
 
 export const getSpotifyAuthUrl = () => {
