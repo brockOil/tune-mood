@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Recommendations from "./pages/Recommendations";
 import Profile from "./pages/Profile";
+import Callback from "./pages/Callback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/recommendations" element={<Recommendations />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/callback" element={<Callback />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,11 +1,82 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { User, LogOut, Music } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { getSpotifyAuthUrl } from "@/lib/spotify";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Profile = () => {
-  // TODO: Replace with actual user data from Spotify
-  const isAuthenticated = false;
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
+        setIsAuthenticated(false);
+        setLoading(false);
+        return;
+      }
+
+      setUser(authUser);
+
+      const { data, error } = await supabase
+        .from("spotify_tokens")
+        .select("*")
+        .eq("user_id", authUser.id)
+        .single();
+
+      setIsAuthenticated(!!data && !error);
+    } catch (err) {
+      console.error("Error checking auth:", err);
+      setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConnectSpotify = () => {
+    const authUrl = getSpotifyAuthUrl();
+    window.location.href = authUrl;
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      if (!user) return;
+
+      const { error } = await supabase
+        .from("spotify_tokens")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setIsAuthenticated(false);
+      toast.success("Disconnected from Spotify");
+    } catch (err) {
+      console.error("Error disconnecting:", err);
+      toast.error("Failed to disconnect");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-dark">
+        <Navbar />
+        <div className="container mx-auto px-4 py-12 pt-28">
+          <div className="text-center">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-dark">
@@ -30,7 +101,7 @@ const Profile = () => {
               <p className="text-muted-foreground mb-8">
                 Sign in with your Spotify account to access personalized recommendations and save your preferences.
               </p>
-              <Button variant="hero" size="lg">
+              <Button variant="hero" size="lg" onClick={handleConnectSpotify}>
                 Connect Spotify Account
               </Button>
             </Card>
@@ -43,8 +114,8 @@ const Profile = () => {
                     <User className="w-10 h-10 text-primary-foreground" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-semibold">User Name</h2>
-                    <p className="text-muted-foreground">user@example.com</p>
+                    <h2 className="text-2xl font-semibold">{user?.email || "User"}</h2>
+                    <p className="text-muted-foreground">Connected to Spotify</p>
                   </div>
                 </div>
               </Card>
@@ -72,7 +143,12 @@ const Profile = () => {
               <Card className="p-8 bg-card/50 backdrop-blur-sm border-border shadow-card">
                 <h3 className="text-xl font-semibold mb-6">Account Actions</h3>
                 <div className="space-y-4">
-                  <Button variant="destructive" className="w-full" size="lg">
+                  <Button 
+                    variant="destructive" 
+                    className="w-full" 
+                    size="lg"
+                    onClick={handleDisconnect}
+                  >
                     <LogOut className="w-5 h-5 mr-2" />
                     Disconnect Spotify
                   </Button>

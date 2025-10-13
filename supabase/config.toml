@@ -1,1 +1,10 @@
 project_id = "dcxzenvgoxvmknbwlgvv"
+
+[functions.spotify-auth]
+verify_jwt = true
+
+[functions.spotify-recommendations]
+verify_jwt = true
+
+[functions.spotify-search]
+verify_jwt = true

@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Music, Search, Heart, Zap, Cloud, Frown, Smile } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
+import TrackCard from "@/components/TrackCard";
+import { getRecommendations, searchTracks } from "@/lib/spotify";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 type Mood = "happy" | "energetic" | "chill" | "sad" | "romantic";
 
@@ -19,15 +23,87 @@ const moods: { value: Mood; label: string; icon: any; color: string }[] = [
 const Recommendations = () => {
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
 
-  const handleMoodSelect = (mood: Mood) => {
-    setSelectedMood(mood);
-    // TODO: Fetch recommendations based on mood
+  useEffect(() => {
+    checkSpotifyConnection();
+  }, []);
+
+  const checkSpotifyConnection = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("spotify_tokens")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      setIsConnected(!!data && !error);
+    } catch (err) {
+      console.error("Error checking Spotify connection:", err);
+    }
   };
 
-  const handleSearch = () => {
-    // TODO: Search for tracks
-    console.log("Searching for:", searchQuery);
+  const handleMoodSelect = async (mood: Mood) => {
+    setSelectedMood(mood);
+    
+    if (!isConnected) {
+      toast.error("Please connect your Spotify account first");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = await getRecommendations({ mood, limit: 20 });
+      setRecommendations(data.tracks);
+      toast.success(`Found ${data.tracks.length} recommendations!`);
+    } catch (error) {
+      console.error("Error fetching recommendations:", error);
+      toast.error("Failed to get recommendations");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+
+    if (!isConnected) {
+      toast.error("Please connect your Spotify account first");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = await searchTracks(searchQuery, 10);
+      setSearchResults(data.tracks?.items || []);
+      toast.success(`Found ${data.tracks?.items?.length || 0} tracks`);
+    } catch (error) {
+      console.error("Error searching:", error);
+      toast.error("Failed to search tracks");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTrackSelect = async (trackId: string) => {
+    setLoading(true);
+    try {
+      const data = await getRecommendations({ trackId, limit: 20 });
+      setRecommendations(data.tracks);
+      setSearchResults([]);
+      toast.success(`Found ${data.tracks.length} similar tracks!`);
+    } catch (error) {
+      console.error("Error fetching recommendations:", error);
+      toast.error("Failed to get recommendations");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -87,8 +163,13 @@ const Recommendations = () => {
 
               {selectedMood && (
                 <div className="mt-6 text-center">
-                  <Button variant="hero" size="lg">
-                    Find Music
+                  <Button 
+                    variant="hero" 
+                    size="lg"
+                    onClick={() => handleMoodSelect(selectedMood)}
+                    disabled={loading}
+                  >
+                    {loading ? "Finding Music..." : "Find Music"}
                   </Button>
                 </div>
               )}
@@ -113,28 +194,61 @@ const Recommendations = () => {
                     className="pl-10 bg-background/50 border-border"
                   />
                 </div>
-                <Button onClick={handleSearch} variant="hero">
-                  Search
+                <Button onClick={handleSearch} variant="hero" disabled={loading}>
+                  {loading ? "Searching..." : "Search"}
                 </Button>
               </div>
 
-              <div className="mt-8 text-center text-muted-foreground">
-                <p>Search results will appear here</p>
+              <div className="mt-8">
+                {searchResults.length > 0 ? (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4">Search Results</h3>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {searchResults.map((track) => (
+                        <div key={track.id} onClick={() => handleTrackSelect(track.id)}>
+                          <TrackCard track={track} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground">
+                    <p>Search results will appear here</p>
+                  </div>
+                )}
               </div>
             </Card>
           </TabsContent>
         </Tabs>
 
-        {/* Placeholder for Recommendations */}
-        <div className="mt-12 max-w-6xl mx-auto">
-          <Card className="p-12 bg-card/30 backdrop-blur-sm border-border text-center">
-            <Music className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">Ready to discover?</h3>
-            <p className="text-muted-foreground">
-              Select a mood or search for a song to get personalized recommendations
-            </p>
-          </Card>
-        </div>
+        {/* Recommendations Display */}
+        {recommendations.length > 0 && (
+          <div className="mt-12 max-w-6xl mx-auto">
+            <h2 className="text-3xl font-bold mb-6 text-center">
+              Your Recommendations
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {recommendations.map((track) => (
+                <TrackCard key={track.id} track={track} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Placeholder */}
+        {recommendations.length === 0 && (
+          <div className="mt-12 max-w-6xl mx-auto">
+            <Card className="p-12 bg-card/30 backdrop-blur-sm border-border text-center">
+              <Music className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-semibold mb-2">Ready to discover?</h3>
+              <p className="text-muted-foreground">
+                {isConnected 
+                  ? "Select a mood or search for a song to get personalized recommendations" 
+                  : "Connect your Spotify account to get started"}
+              </p>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
