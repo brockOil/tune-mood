@@ -150,17 +150,20 @@ Deno.serve(async (req) => {
         console.log('Top tracks request failed:', topTracksResponse.status);
       }
 
-      // Add seed genres based on mood
-      const moodGenres: Record<string, string> = {
-        happy: 'pop,dance,indie',
-        energetic: 'electronic,rock,workout',
-        chill: 'ambient,acoustic,lo-fi',
-        sad: 'indie,alternative,soul',
-        romantic: 'r-n-b,soul,indie',
-      };
+      // Add seed genres based on mood (without seed_tracks if we have top tracks)
+      // Spotify allows max 5 seeds total
+      if (!params.has('seed_tracks')) {
+        const moodGenres: Record<string, string> = {
+          happy: 'pop,dance,happy',
+          energetic: 'rock,electronic,work-out',
+          chill: 'ambient,chill,indie',
+          sad: 'sad,indie,alternative',
+          romantic: 'romance,soul,r-n-b',
+        };
 
-      if (moodGenres[mood]) {
-        params.append('seed_genres', moodGenres[mood]);
+        if (moodGenres[mood]) {
+          params.append('seed_genres', moodGenres[mood]);
+        }
       }
     } else if (trackId) {
       // Track-based recommendations
