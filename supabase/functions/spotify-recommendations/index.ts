@@ -137,13 +137,17 @@ Deno.serve(async (req) => {
 
       if (topTracksResponse.ok) {
         const topTracks = await topTracksResponse.json();
+        console.log('Top tracks fetched:', topTracks.items?.length || 0);
         if (topTracks.items && topTracks.items.length > 0) {
           const seedTracks = topTracks.items
             .slice(0, 2)
             .map((t: any) => t.id)
             .join(',');
           params.append('seed_tracks', seedTracks);
+          console.log('Using seed tracks:', seedTracks);
         }
+      } else {
+        console.log('Top tracks request failed:', topTracksResponse.status);
       }
 
       // Add seed genres based on mood
@@ -165,24 +169,28 @@ Deno.serve(async (req) => {
       throw new Error('Either mood or trackId is required');
     }
 
+    // Log the final request URL for debugging
+    const requestUrl = `https://api.spotify.com/v1/recommendations?${params.toString()}`;
+    console.log('Spotify API Request URL:', requestUrl);
+
     // Get recommendations from Spotify
-    const recommendationsResponse = await fetch(
-      `https://api.spotify.com/v1/recommendations?${params.toString()}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      }
-    );
+    const recommendationsResponse = await fetch(requestUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    console.log('Spotify API Response Status:', recommendationsResponse.status);
 
     if (!recommendationsResponse.ok) {
-      const errorData = await recommendationsResponse.text();
-      console.error('Spotify recommendations failed:', errorData);
-      throw new Error('Failed to get recommendations');
+      const errorData = await recommendationsResponse.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('Spotify recommendations failed with status:', recommendationsResponse.status);
+      console.error('Spotify error details:', JSON.stringify(errorData));
+      throw new Error(`Spotify API error: ${JSON.stringify(errorData)}`);
     }
 
     const recommendations = await recommendationsResponse.json();
-    console.log(`Found ${recommendations.tracks.length} recommendations`);
+    console.log(`Found ${recommendations.tracks?.length || 0} recommendations`);
 
     return new Response(
       JSON.stringify({ tracks: recommendations.tracks }),
