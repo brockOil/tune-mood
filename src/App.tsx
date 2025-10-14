@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Recommendations from "./pages/Recommendations";
 import Profile from "./pages/Profile";
 import Callback from "./pages/Callback";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,6 +20,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/recommendations" element={<Recommendations />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/callback" element={<Callback />} />

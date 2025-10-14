@@ -36,14 +36,16 @@ const Index = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link to="/recommendations">
+            <Link to="/auth">
               <Button variant="hero" size="lg" className="min-w-[200px]">
                 Get Started
               </Button>
             </Link>
-            <Button variant="outline" size="lg" className="min-w-[200px] border-primary/50 hover:border-primary">
-              Learn More
-            </Button>
+            <Link to="/auth">
+              <Button variant="outline" size="lg" className="min-w-[200px] border-primary/50 hover:border-primary">
+                Sign In
+              </Button>
+            </Link>
           </div>
 
           {/* Feature Pills */}
