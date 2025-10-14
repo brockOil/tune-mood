@@ -141,28 +141,40 @@ Deno.serve(async (req) => {
         const topTracks = await topTracksResponse.json();
         console.log('Top tracks fetched:', topTracks.items?.length || 0);
         if (topTracks.items && topTracks.items.length > 0) {
-          // Use up to 5 seed tracks from user's top tracks
+          // Use up to 3 seed tracks (leave room for genres if needed)
           const seedTracks = topTracks.items
-            .slice(0, 5)
+            .slice(0, 3)
             .map((t: any) => t.id)
             .join(',');
           params.append('seed_tracks', seedTracks);
           console.log('Using seed tracks:', seedTracks);
           hasSeeds = true;
+          
+          // Add 2 genre seeds for variety
+          const moodGenres: Record<string, string> = {
+            happy: 'pop,dance',
+            energetic: 'rock,edm',
+            chill: 'ambient,chill',
+            sad: 'sad,indie',
+            romantic: 'soul,r-n-b',
+          };
+          
+          if (moodGenres[mood]) {
+            params.append('seed_genres', moodGenres[mood]);
+          }
         }
       } else {
         console.log('Top tracks request failed:', topTracksResponse.status);
       }
 
-      // If no listening history, use valid Spotify seed genres
-      // These are official Spotify genres
+      // If no listening history, use only valid Spotify seed genres
       if (!hasSeeds) {
         const moodGenres: Record<string, string> = {
-          happy: 'pop,dance,party',
-          energetic: 'rock,edm,work-out',
-          chill: 'ambient,chill,acoustic',
-          sad: 'sad,indie,singer-songwriter',
-          romantic: 'romance,soul,r-n-b',
+          happy: 'pop,dance,party,happy,indie',
+          energetic: 'rock,edm,work-out,electronic,metal',
+          chill: 'ambient,chill,acoustic,indie,lo-fi',
+          sad: 'sad,indie,alternative,emo,soul',
+          romantic: 'romance,soul,r-n-b,indie,acoustic',
         };
 
         if (moodGenres[mood]) {
