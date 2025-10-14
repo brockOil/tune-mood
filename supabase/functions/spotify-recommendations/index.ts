@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
     // Build recommendations query
     const params = new URLSearchParams({
       limit: limit.toString(),
+      market: 'US', // Add market parameter
     });
 
     if (mood && moodFeatures[mood]) {
@@ -125,62 +126,18 @@ Deno.serve(async (req) => {
         params.append(key, String(value));
       });
 
-      // Get user's top tracks as seed
-      const topTracksResponse = await fetch(
-        `https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=medium_term`,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        }
-      );
+      // Use only genre seeds for now (simpler and more reliable)
+      const moodGenres: Record<string, string> = {
+        happy: 'pop,dance,party,happy,indie',
+        energetic: 'rock,edm,work-out,electronic,metal',
+        chill: 'ambient,chill,acoustic,indie,piano',
+        sad: 'sad,indie,alternative,emo,soul',
+        romantic: 'romance,soul,r-n-b,indie,acoustic',
+      };
 
-      let hasSeeds = false;
-      
-      if (topTracksResponse.ok) {
-        const topTracks = await topTracksResponse.json();
-        console.log('Top tracks fetched:', topTracks.items?.length || 0);
-        if (topTracks.items && topTracks.items.length > 0) {
-          // Use up to 3 seed tracks (leave room for genres if needed)
-          const seedTracks = topTracks.items
-            .slice(0, 3)
-            .map((t: any) => t.id)
-            .join(',');
-          params.append('seed_tracks', seedTracks);
-          console.log('Using seed tracks:', seedTracks);
-          hasSeeds = true;
-          
-          // Add 2 genre seeds for variety
-          const moodGenres: Record<string, string> = {
-            happy: 'pop,dance',
-            energetic: 'rock,edm',
-            chill: 'ambient,chill',
-            sad: 'sad,indie',
-            romantic: 'soul,r-n-b',
-          };
-          
-          if (moodGenres[mood]) {
-            params.append('seed_genres', moodGenres[mood]);
-          }
-        }
-      } else {
-        console.log('Top tracks request failed:', topTracksResponse.status);
-      }
-
-      // If no listening history, use only valid Spotify seed genres
-      if (!hasSeeds) {
-        const moodGenres: Record<string, string> = {
-          happy: 'pop,dance,party,happy,indie',
-          energetic: 'rock,edm,work-out,electronic,metal',
-          chill: 'ambient,chill,acoustic,indie,lo-fi',
-          sad: 'sad,indie,alternative,emo,soul',
-          romantic: 'romance,soul,r-n-b,indie,acoustic',
-        };
-
-        if (moodGenres[mood]) {
-          params.append('seed_genres', moodGenres[mood]);
-          console.log('Using seed genres:', moodGenres[mood]);
-        }
+      if (moodGenres[mood]) {
+        params.append('seed_genres', moodGenres[mood]);
+        console.log('Using seed genres:', moodGenres[mood]);
       }
     } else if (trackId) {
       // Track-based recommendations
