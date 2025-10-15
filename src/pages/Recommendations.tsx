@@ -6,6 +6,7 @@ import { Music, Search, Heart, Zap, Cloud, Frown, Smile } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import TrackCard from "@/components/TrackCard";
+import SpotifyPlayer from "@/components/SpotifyPlayer";
 import { getRecommendations, searchTracks } from "@/lib/spotify";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +28,7 @@ const Recommendations = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [selectedTrackUri, setSelectedTrackUri] = useState<string>("");
 
   useEffect(() => {
     checkSpotifyConnection();
@@ -221,6 +223,13 @@ const Recommendations = () => {
           </TabsContent>
         </Tabs>
 
+        {/* Spotify Player */}
+        {isConnected && (
+          <div className="mt-12 max-w-2xl mx-auto">
+            <SpotifyPlayer trackUri={selectedTrackUri} />
+          </div>
+        )}
+
         {/* Recommendations Display */}
         {recommendations.length > 0 && (
           <div className="mt-12 max-w-6xl mx-auto">
@@ -229,7 +238,13 @@ const Recommendations = () => {
             </h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               {recommendations.map((track) => (
-                <TrackCard key={track.id} track={track} />
+                <div 
+                  key={track.id} 
+                  onClick={() => setSelectedTrackUri(track.uri)}
+                  className="cursor-pointer transition-transform hover:scale-105"
+                >
+                  <TrackCard track={track} />
+                </div>
               ))}
             </div>
           </div>

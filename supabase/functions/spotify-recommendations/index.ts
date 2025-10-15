@@ -126,13 +126,13 @@ Deno.serve(async (req) => {
         params.append(key, String(value));
       });
 
-      // Use only genre seeds for now (simpler and more reliable)
+      // Use ONLY valid Spotify genre seeds (max 5 seeds)
       const moodGenres: Record<string, string> = {
-        happy: 'pop,dance,party,happy,indie',
-        energetic: 'rock,edm,work-out,electronic,metal',
-        chill: 'ambient,chill,acoustic,indie,piano',
-        sad: 'sad,indie,alternative,emo,soul',
-        romantic: 'romance,soul,r-n-b,indie,acoustic',
+        happy: 'pop,dance,party,disco,funk',
+        energetic: 'rock,metal,work-out,power-pop,hardcore',
+        chill: 'ambient,chill,acoustic,piano,sleep',
+        sad: 'sad,emo,grunge,blues,songwriter',
+        romantic: 'romance,soul,r-n-b,latin,jazz',
       };
 
       if (moodGenres[mood]) {

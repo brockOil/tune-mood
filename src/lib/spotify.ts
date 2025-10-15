@@ -13,6 +13,9 @@ export const getSpotifyAuthUrl = () => {
     "user-library-read",
     "playlist-read-private",
     "user-read-recently-played",
+    "streaming",
+    "user-read-playback-state",
+    "user-modify-playback-state",
   ].join(" ");
 
   const params = new URLSearchParams({
