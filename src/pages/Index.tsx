@@ -31,8 +31,7 @@ const Index = () => {
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Discover music that matches your mood. AI-powered recommendations from Spotify, 
-            tailored to how you feel right now.
+            Stream your favorite music with Spotify integration. Browse our curated music library organized by mood and genre.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -88,9 +87,9 @@ const Index = () => {
               <div className="w-12 h-12 rounded-lg bg-gradient-secondary flex items-center justify-center mb-4">
                 <Heart className="w-6 h-6 text-secondary-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Select Your Mood</h3>
+              <h3 className="text-xl font-semibold mb-3">Browse Library</h3>
               <p className="text-muted-foreground">
-                Choose how you're feeling - happy, energetic, chill, sad, or romantic.
+                Choose from our curated collection of tracks organized by mood and genre.
               </p>
             </div>
 
@@ -98,9 +97,9 @@ const Index = () => {
               <div className="w-12 h-12 rounded-lg bg-gradient-accent flex items-center justify-center mb-4">
                 <Sparkles className="w-6 h-6 text-accent-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Discover Music</h3>
+              <h3 className="text-xl font-semibold mb-3">Stream Music</h3>
               <p className="text-muted-foreground">
-                Get instant recommendations with previews and links to play on Spotify.
+                Click any track to play it instantly using Spotify's Web Playback SDK.
               </p>
             </div>
           </div>

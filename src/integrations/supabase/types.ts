@@ -44,6 +44,54 @@ export type Database = {
         }
         Relationships: []
       }
+      tracks: {
+        Row: {
+          added_by: string | null
+          album: string
+          album_art_url: string | null
+          artist: string
+          created_at: string
+          duration_ms: number | null
+          genre: string | null
+          id: string
+          mood: string | null
+          name: string
+          preview_url: string | null
+          spotify_id: string
+          spotify_uri: string
+        }
+        Insert: {
+          added_by?: string | null
+          album: string
+          album_art_url?: string | null
+          artist: string
+          created_at?: string
+          duration_ms?: number | null
+          genre?: string | null
+          id?: string
+          mood?: string | null
+          name: string
+          preview_url?: string | null
+          spotify_id: string
+          spotify_uri: string
+        }
+        Update: {
+          added_by?: string | null
+          album?: string
+          album_art_url?: string | null
+          artist?: string
+          created_at?: string
+          duration_ms?: number | null
+          genre?: string | null
+          id?: string
+          mood?: string | null
+          name?: string
+          preview_url?: string | null
+          spotify_id?: string
+          spotify_uri?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

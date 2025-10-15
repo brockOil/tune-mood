@@ -2,37 +2,31 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Music, Search, Heart, Zap, Cloud, Frown, Smile } from "lucide-react";
+import { Music, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import TrackCard from "@/components/TrackCard";
 import SpotifyPlayer from "@/components/SpotifyPlayer";
-import { getRecommendations, searchTracks } from "@/lib/spotify";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-
-type Mood = "happy" | "energetic" | "chill" | "sad" | "romantic";
-
-const moods: { value: Mood; label: string; icon: any; color: string }[] = [
-  { value: "happy", label: "Happy", icon: Smile, color: "text-primary" },
-  { value: "energetic", label: "Energetic", icon: Zap, color: "text-accent" },
-  { value: "chill", label: "Chill", icon: Cloud, color: "text-secondary" },
-  { value: "sad", label: "Sad", icon: Frown, color: "text-muted-foreground" },
-  { value: "romantic", label: "Romantic", icon: Heart, color: "text-accent" },
-];
+import { toast } from "sonner";
 
 const Recommendations = () => {
-  const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
+  const [tracks, setTracks] = useState<any[]>([]);
+  const [filteredTracks, setFilteredTracks] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [recommendations, setRecommendations] = useState<any[]>([]);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [selectedTrackUri, setSelectedTrackUri] = useState<string>("");
+  const [selectedFilter, setSelectedFilter] = useState<string>("all");
 
   useEffect(() => {
     checkSpotifyConnection();
+    loadTracks();
   }, []);
+
+  useEffect(() => {
+    filterTracks();
+  }, [tracks, searchQuery, selectedFilter]);
 
   const checkSpotifyConnection = async () => {
     try {
@@ -51,62 +45,56 @@ const Recommendations = () => {
     }
   };
 
-  const handleMoodSelect = async (mood: Mood) => {
-    setSelectedMood(mood);
-    
-    if (!isConnected) {
-      toast.error("Please connect your Spotify account first");
-      return;
-    }
-
+  const loadTracks = async () => {
     setLoading(true);
     try {
-      const data = await getRecommendations({ mood, limit: 20 });
-      setRecommendations(data.tracks);
-      toast.success(`Found ${data.tracks.length} recommendations!`);
+      const { data, error } = await supabase
+        .from("tracks")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setTracks(data || []);
+      toast.success(`Loaded ${data?.length || 0} tracks`);
     } catch (error) {
-      console.error("Error fetching recommendations:", error);
-      toast.error("Failed to get recommendations");
+      console.error("Error loading tracks:", error);
+      toast.error("Failed to load tracks");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+  const filterTracks = () => {
+    let filtered = tracks;
 
-    if (!isConnected) {
-      toast.error("Please connect your Spotify account first");
-      return;
+    // Filter by mood
+    if (selectedFilter !== "all") {
+      filtered = filtered.filter((track) => track.mood === selectedFilter);
     }
 
-    setLoading(true);
-    try {
-      const data = await searchTracks(searchQuery, 10);
-      setSearchResults(data.tracks?.items || []);
-      toast.success(`Found ${data.tracks?.items?.length || 0} tracks`);
-    } catch (error) {
-      console.error("Error searching:", error);
-      toast.error("Failed to search tracks");
-    } finally {
-      setLoading(false);
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (track) =>
+          track.name.toLowerCase().includes(query) ||
+          track.artist.toLowerCase().includes(query) ||
+          track.album.toLowerCase().includes(query)
+      );
     }
+
+    setFilteredTracks(filtered);
   };
 
-  const handleTrackSelect = async (trackId: string) => {
-    setLoading(true);
-    try {
-      const data = await getRecommendations({ trackId, limit: 20 });
-      setRecommendations(data.tracks);
-      setSearchResults([]);
-      toast.success(`Found ${data.tracks.length} similar tracks!`);
-    } catch (error) {
-      console.error("Error fetching recommendations:", error);
-      toast.error("Failed to get recommendations");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const moods = [
+    { value: "all", label: "All Tracks" },
+    { value: "happy", label: "Happy" },
+    { value: "energetic", label: "Energetic" },
+    { value: "chill", label: "Chill" },
+    { value: "sad", label: "Sad" },
+    { value: "romantic", label: "Romantic" },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-dark">
@@ -120,146 +108,109 @@ const Recommendations = () => {
             </div>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Get Recommendations
+            Music Library
           </h1>
           <p className="text-muted-foreground text-lg">
-            Discover new music based on your mood or favorite tracks
+            Browse and stream your favorite tracks
           </p>
         </div>
 
-        {/* Tabs for Selection Mode */}
-        <Tabs defaultValue="mood" className="max-w-4xl mx-auto">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="mood">By Mood</TabsTrigger>
-            <TabsTrigger value="song">By Song</TabsTrigger>
-          </TabsList>
-
-          {/* Mood-Based Selection */}
-          <TabsContent value="mood" className="space-y-8">
-            <Card className="p-8 bg-card/50 backdrop-blur-sm border-border shadow-card">
-              <h2 className="text-2xl font-semibold mb-6 text-center">
-                How are you feeling?
-              </h2>
-              
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {moods.map((mood) => {
-                  const Icon = mood.icon;
-                  const isSelected = selectedMood === mood.value;
-                  
-                  return (
-                    <button
-                      key={mood.value}
-                      onClick={() => handleMoodSelect(mood.value)}
-                      className={`p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
-                        isSelected
-                          ? "border-primary bg-primary/10 shadow-glow-primary"
-                          : "border-border bg-card hover:border-primary/50"
-                      }`}
-                    >
-                      <Icon className={`w-8 h-8 mx-auto mb-2 ${mood.color}`} />
-                      <p className="text-sm font-medium">{mood.label}</p>
-                    </button>
-                  );
-                })}
+        {/* Filters and Search */}
+        <div className="max-w-4xl mx-auto mb-8">
+          <Card className="p-6 bg-card/50 backdrop-blur-sm border-border shadow-card">
+            <div className="space-y-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  placeholder="Search by track, artist, or album..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-background/50 border-border"
+                />
               </div>
 
-              {selectedMood && (
-                <div className="mt-6 text-center">
-                  <Button 
-                    variant="hero" 
-                    size="lg"
-                    onClick={() => handleMoodSelect(selectedMood)}
-                    disabled={loading}
+              {/* Mood Filters */}
+              <div className="flex flex-wrap gap-2">
+                {moods.map((mood) => (
+                  <Button
+                    key={mood.value}
+                    variant={selectedFilter === mood.value ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedFilter(mood.value)}
                   >
-                    {loading ? "Finding Music..." : "Find Music"}
+                    {mood.label}
                   </Button>
-                </div>
-              )}
-            </Card>
-          </TabsContent>
-
-          {/* Song-Based Selection */}
-          <TabsContent value="song" className="space-y-8">
-            <Card className="p-8 bg-card/50 backdrop-blur-sm border-border shadow-card">
-              <h2 className="text-2xl font-semibold mb-6 text-center">
-                Search for a song
-              </h2>
-              
-              <div className="flex gap-4 max-w-2xl mx-auto">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    placeholder="Search for songs or artists..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                    className="pl-10 bg-background/50 border-border"
-                  />
-                </div>
-                <Button onClick={handleSearch} variant="hero" disabled={loading}>
-                  {loading ? "Searching..." : "Search"}
-                </Button>
+                ))}
               </div>
-
-              <div className="mt-8">
-                {searchResults.length > 0 ? (
-                  <div>
-                    <h3 className="text-xl font-semibold mb-4">Search Results</h3>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {searchResults.map((track) => (
-                        <div key={track.id} onClick={() => handleTrackSelect(track.id)}>
-                          <TrackCard track={track} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center text-muted-foreground">
-                    <p>Search results will appear here</p>
-                  </div>
-                )}
-              </div>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            </div>
+          </Card>
+        </div>
 
         {/* Spotify Player */}
-        {isConnected && (
-          <div className="mt-12 max-w-2xl mx-auto">
+        {isConnected && selectedTrackUri && (
+          <div className="mt-8 mb-12 max-w-2xl mx-auto">
             <SpotifyPlayer trackUri={selectedTrackUri} />
           </div>
         )}
 
-        {/* Recommendations Display */}
-        {recommendations.length > 0 && (
-          <div className="mt-12 max-w-6xl mx-auto">
-            <h2 className="text-3xl font-bold mb-6 text-center">
-              Your Recommendations
-            </h2>
+        {/* Tracks Grid */}
+        {loading ? (
+          <div className="text-center">
+            <p className="text-muted-foreground">Loading tracks...</p>
+          </div>
+        ) : filteredTracks.length > 0 ? (
+          <div className="max-w-6xl mx-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">
+                {filteredTracks.length} Track{filteredTracks.length !== 1 ? "s" : ""}
+              </h2>
+            </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {recommendations.map((track) => (
-                <div 
-                  key={track.id} 
-                  onClick={() => setSelectedTrackUri(track.uri)}
+              {filteredTracks.map((track) => (
+                <div
+                  key={track.id}
+                  onClick={() => {
+                    if (!isConnected) {
+                      toast.error("Please connect your Spotify account first");
+                      return;
+                    }
+                    setSelectedTrackUri(track.spotify_uri);
+                  }}
                   className="cursor-pointer transition-transform hover:scale-105"
                 >
-                  <TrackCard track={track} />
+                  <TrackCard
+                    track={{
+                      id: track.spotify_id,
+                      name: track.name,
+                      artists: [{ name: track.artist }],
+                      album: {
+                        name: track.album,
+                        images: track.album_art_url
+                          ? [{ url: track.album_art_url }]
+                          : [],
+                      },
+                      preview_url: track.preview_url,
+                      external_urls: {
+                        spotify: `https://open.spotify.com/track/${track.spotify_id}`,
+                      },
+                    }}
+                  />
                 </div>
               ))}
             </div>
           </div>
-        )}
-
-        {/* Placeholder */}
-        {recommendations.length === 0 && (
+        ) : (
           <div className="mt-12 max-w-6xl mx-auto">
             <Card className="p-12 bg-card/30 backdrop-blur-sm border-border text-center">
               <Music className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-xl font-semibold mb-2">Ready to discover?</h3>
+              <h3 className="text-xl font-semibold mb-2">No tracks found</h3>
               <p className="text-muted-foreground">
-                {isConnected 
-                  ? "Select a mood or search for a song to get personalized recommendations" 
-                  : "Connect your Spotify account to get started"}
+                {searchQuery || selectedFilter !== "all"
+                  ? "Try adjusting your filters or search query"
+                  : isConnected
+                  ? "The music library is empty"
+                  : "Connect your Spotify account to start streaming"}
               </p>
             </Card>
           </div>
