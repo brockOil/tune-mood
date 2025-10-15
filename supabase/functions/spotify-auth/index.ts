@@ -12,9 +12,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { code, redirectUri } = await req.json();
+    const { code, redirectUri, codeVerifier } = await req.json();
 
-    console.log('Spotify auth callback received', { hasCode: !!code });
+    console.log('Spotify auth callback received', { hasCode: !!code, hasPKCE: !!codeVerifier });
 
     if (!code) {
       throw new Error('Authorization code is required');
@@ -23,22 +23,36 @@ Deno.serve(async (req) => {
     const clientId = Deno.env.get('SPOTIFY_CLIENT_ID');
     const clientSecret = Deno.env.get('SPOTIFY_CLIENT_SECRET');
 
-    if (!clientId || !clientSecret) {
-      throw new Error('Spotify credentials not configured');
+    if (!clientId) {
+      throw new Error('Spotify Client ID not configured');
     }
 
-    // Exchange authorization code for access token
+    // Exchange authorization code for access token using PKCE
+    const tokenParams: Record<string, string> = {
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: redirectUri,
+      client_id: clientId,
+    };
+
+    // Add code_verifier for PKCE flow (no client_secret needed with PKCE)
+    if (codeVerifier) {
+      tokenParams.code_verifier = codeVerifier;
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
+
+    // Only use Basic Auth if not using PKCE
+    if (!codeVerifier && clientSecret) {
+      headers['Authorization'] = 'Basic ' + btoa(`${clientId}:${clientSecret}`);
+    }
+
     const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`),
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: redirectUri,
-      }),
+      headers,
+      body: new URLSearchParams(tokenParams),
     });
 
     if (!tokenResponse.ok) {

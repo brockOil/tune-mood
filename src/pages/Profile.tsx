@@ -43,8 +43,8 @@ const Profile = () => {
     }
   };
 
-  const handleConnectSpotify = () => {
-    const authUrl = getSpotifyAuthUrl();
+  const handleConnectSpotify = async () => {
+    const authUrl = await getSpotifyAuthUrl();
     window.location.href = authUrl;
   };
 
